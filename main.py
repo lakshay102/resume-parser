@@ -15,6 +15,7 @@ import os
 import uuid
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
+from parser.extractor import extract_basic_fields
 from parser.pdf_reader import extract_text_from_pdf
 import json
 
@@ -43,14 +44,21 @@ async def parse_resume(file: UploadFile = File(...)):
     raw_text = extract_text_from_pdf(file_path)
 
     # TEMP: Save raw text to JSON (structured parsing comes later)
-    data = {
+    # data = {
+    #     "file_name": file.filename,
+    #     "file_id": file_id,
+    #     "raw_text": raw_text
+    # }
+
+    # For Structured Parsing
+    structured_data = extract_basic_fields(raw_text)
+    structured_data.update({
         "file_name": file.filename,
-        "file_id": file_id,
-        "raw_text": raw_text
-    }
+        "file_id": file_id
+    })
 
     output_path = os.path.join(JSON_OUTPUT_DIR, f"{file_id}.json")
     with open(output_path, "w", encoding="utf-8") as out_file:
-        json.dump(data, out_file, indent=4, ensure_ascii=False)
+        json.dump(structured_data, out_file, indent=4, ensure_ascii=False)
 
-    return {"message": "Resume parsed successfully", "data": data}
+    return {"message": "Resume parsed successfully", "data": structured_data}

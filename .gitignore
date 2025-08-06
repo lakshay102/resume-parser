@@ -1,5 +1,6 @@
 /uploads
 /venv
+/parsed_jsons
 __pycache__
 __pycache__/
 test.pdf
