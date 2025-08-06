@@ -16,6 +16,7 @@ import uuid
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
 from parser.extractor import extract_basic_fields
+from parser.docx_reader import extract_text_from_docx
 from parser.pdf_reader import extract_text_from_pdf
 import json
 
@@ -27,21 +28,29 @@ os.makedirs(JSON_OUTPUT_DIR, exist_ok=True)
 
 app = FastAPI()
 
+SUPPORTED_EXTENSIONS = {".pdf", ".docx"}
 
 @app.post("/parse-resume/")
 async def parse_resume(file: UploadFile = File(...)):
-    if not file.filename.endswith(".pdf"):
-        return JSONResponse(status_code=400, content={"error": "Only PDF files are supported."})
+    ext = os.path.splitext(file.filename)[-1].lower()
+    
+    if ext not in SUPPORTED_EXTENSIONS:
+        return JSONResponse(status_code=400, content={"error": "Only PDF and DOCX files are supported."})
 
     file_id = str(uuid.uuid4())
-    file_path = os.path.join(UPLOAD_DIR, f"{file_id}.pdf")
+    saved_path = os.path.join(UPLOAD_DIR, f"{file_id}{ext}")
 
     # Save uploaded file
-    with open(file_path, "wb") as f:
+    with open(saved_path, "wb") as f:
         f.write(await file.read())
 
-    # Extract raw text from PDF
-    raw_text = extract_text_from_pdf(file_path)
+    # Extract text based on file type
+    if ext == ".pdf":
+        raw_text = extract_text_from_pdf(saved_path)
+    elif ext == ".docx":
+        raw_text = extract_text_from_docx(saved_path)
+    else:
+        return JSONResponse(status_code=400, content={"error": "Unsupported file type."})
 
     # TEMP: Save raw text to JSON (structured parsing comes later)
     # data = {
